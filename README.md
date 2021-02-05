@@ -1,4 +1,4 @@
-This originless and stateless app will fetch a captcha challenge and verify your submission
+This originless and stateless app will fetch a captcha challenge and verify your submission -- https://fully-eminent-teal.edgecompute.app/
 
 Built with Fastly Compute@Edge.
 
