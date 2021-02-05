@@ -16,7 +16,5 @@ lazy_static = "^1.4.0"
 
 hmac-sha256 = "0.1.6"
 cookie = "0.14.3"
-[dependencies.cookie]
-features = ["signed"]
 hex = "0.4.2"
 
