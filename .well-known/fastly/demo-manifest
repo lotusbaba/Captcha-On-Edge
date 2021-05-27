@@ -1,0 +1,23 @@
+---
+schemaVersion: 1
+id: captcha
+title: CAPTCHA at the edge
+image:
+  href: /images/Captcha-On-Edge.png
+  alt: Solve a captcha string on the edge
+description: Present the user with a CAPTCHA challenge to verify that they are not a bot, generated, served and verified at the edge.
+repo: https://github.com/lotusbaba/CaptchaOnEdge
+editUrl: https://github.com/lotusbaba/CaptchaOnEdge/edit/main/.well-known/fastly/demo-manifest
+sessions: false
+views:
+  endUser:
+    mode: frame
+    href: /
+    height: 400
+---
+
+## What's going on here?
+
+This is a Rust app running on Compute@Edgge that generates a [CAPTCHA](https://en.wikipedia.org/wiki/CAPTCHA) and saves a signed token in a cookie which is used to verify the CAPTCHA when it is resolved.  If the user enters an incorrect string, they will be presented with a new CAPTCHA to solve.  Once the challenge is successfully solved the screen will refresh after 4s.
+
+When you initially load the site, it serves an HTML and JavaScript web app that is statically delivered from the edge. The client web app makes calls to various endpoints at the edge and these endpoints each have a route within the Rust app that serves the request without the overhead of maintaining an origin server.

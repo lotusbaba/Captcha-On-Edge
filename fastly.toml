@@ -1,0 +1,9 @@
+# This file describes a Fastly Compute@Edge package. To learn more visit:
+# https://developer.fastly.com/reference/fastly-toml/
+
+authors = ["jay.bhaskar@gmail.com"]
+description = "SigSci Captcha project"
+language = "rust"
+manifest_version = 1
+name = "SigSciCaptcha"
+service_id = "3GYVYprtgRdBBSABC8xCPC"
