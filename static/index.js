@@ -2,7 +2,7 @@ const input = document.getElementById('input');
 const output = document.getElementById('output');
 
 function generateCaptcha() {
-  fetch('https://fully-eminent-teal.edgecompute.app/generateCaptcha', {
+  fetch('https://captcha.edgecompute.app/generateCaptcha', {
     cache: 'no-cache',
     mode: 'cors'
   })
@@ -23,13 +23,13 @@ $( document ).ready(generateCaptcha());
 function verifyCaptcha() {
   const captcha_string = captcha_text.value;
 
-  var response = fetch('/verifyCaptcha', {
+  var response = fetch('https://captcha.edgecompute.app/verifyCaptcha', {
     method: 'POST',
     body: captcha_string,
   }).then(function(response) {
 
        if (!response.ok) {
-               fetch('https://fully-eminent-teal.edgecompute.app/generateCaptcha', {
+               fetch('https://captcha.edgecompute.app/generateCaptcha', {
                    cache: 'no-cache',
                    mode: 'cors'
                  })
@@ -46,6 +46,7 @@ function verifyCaptcha() {
                        })
                } else {
                    document.getElementById('capheader').innerHTML = "<h2>Captcha verified</h2>";
+                   setTimeout(function(){window.location.reload();}, 4000);
                }
 
      });

@@ -1,4 +1,4 @@
-//! Default Compute@Edge template program.
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -9,7 +9,7 @@ use std::str;
 use cookie::Cookie;
 
 use fastly::http::{header, HeaderValue, Method, StatusCode};
-use fastly::{Body, Error, Request, RequestExt, Response, ResponseExt, dictionary::Dictionary};
+use fastly::{Body, Error, Request, Response, Dictionary};
 
 extern crate captcha;
 use captcha::{gen, Difficulty};
@@ -67,6 +67,34 @@ lazy_static! {
                 content_type: "application/javascript",
             },
         );
+        f.insert(
+            "/images/Captcha-On-Edge.png",
+            Page {
+                body: include_bytes!("../images/Captcha-On-Edge.png"),
+                content_type: "image/png",
+            },
+        );
+        f.insert(
+            "/.well-known/fastly/demo-manifest",
+            Page {
+                body: include_bytes!("../.well-known/fastly/demo-manifest"),
+                content_type: "application/octet-stream",
+            },
+        );
+	f.insert(
+            "/moment.js",
+            Page {
+                body: include_bytes!("../static/moment.js"),
+                content_type: "application/javascript",
+            },
+        );
+	f.insert(
+            "/jquery-3.6.0.min.js",
+            Page {
+                body: include_bytes!("../static/jquery-3.6.0.min.js"),
+                content_type: "application/javascript",
+            },
+        );
         f
     };
 }
@@ -99,46 +127,53 @@ impl CaptchaConfig {
 ///
 /// If `main` returns an error, a 500 error response will be delivered to the client.
 #[fastly::main]
-fn main(mut req: Request<Body>) -> Result<impl ResponseExt, Error> {
+fn main(mut req: Request) -> Result<Response, Error> {
 
-    let mut path = req.uri().path().to_string();
+    let new_req = req.clone_with_body();
+    let mut path = new_req.get_path().to_string();
 
     if path.ends_with("/") {
         path.push_str("index.html");
     }
     let path_string = path.as_str();
+   println!("Hello from the root path! {}", path_string);
 
     // Make any desired changes to the client request.
     // We can filter requests that have unexpected methods.
     const VALID_METHODS: [Method; 3] = [Method::HEAD, Method::GET, Method::POST];
-    if !(VALID_METHODS.contains(req.method())) {
-        return Ok(Response::builder()
-            .status(StatusCode::METHOD_NOT_ALLOWED)
-            .body(Body::from("This method is not allowed"))?);
+
+    if !(VALID_METHODS.contains(req.get_method())) {
+
+        return Ok(Response::new()
+            .with_status(StatusCode::METHOD_NOT_ALLOWED)
+            .with_body(Body::from("This method is not allowed")));
     }
 
     let captcha_config = CaptchaConfig::load_config();
     let captcha_secret_string = format!("{}", captcha_config.secret_access_key).into_bytes();
 
     // Pattern match on the request method and path.
-    match (req.method(), req.uri().path()) {
+
+    match (req.get_method(), req.get_path()) {
         // If request is a `GET` to the `/` path, send a default response.
         (&Method::GET, _) if FILES.contains_key(path_string) => {
         if FILES[path_string].content_type.contains("image") {
-        Ok(Response::builder()
-        .status(StatusCode::OK)
-        .header("Cache-Control", "max-age=10")
-        .header("Content-Type", FILES[path_string].content_type)
-        .header("Access-Control-Allow-Origin", "*")
-        .body(Body::try_from(FILES[path_string].body)?)?)
+
+        Ok(Response::new()
+        .with_status(StatusCode::OK)
+        .with_header("Cache-Control", "max-age=10")
+        .with_header("Content-Type", FILES[path_string].content_type)
+        .with_header("Access-Control-Allow-Origin", "*")
+        .with_body(Body::try_from(FILES[path_string].body)?))
         } else {
-        Ok(Response::builder()
-        .status(StatusCode::OK)
-        .header("Cache-Control", "max-age=10")
-        .header("Content-Type", FILES[path_string].content_type)
-        .header("Access-Control-Allow-Origin", "*")
-        .header("X-Compress-Hint", "on")
-        .body(Body::try_from(FILES[path_string].body)?)?)
+
+        Ok(Response::new()
+        .with_status(StatusCode::OK)
+        .with_header("Cache-Control", "max-age=10")
+        .with_header("Content-Type", FILES[path_string].content_type)
+        .with_header("Access-Control-Allow-Origin", "*")
+        .with_header("X-Compress-Hint", "on")
+        .with_body(Body::try_from(FILES[path_string].body)?))
         }
         }
 
@@ -154,59 +189,55 @@ fn main(mut req: Request<Body>) -> Result<impl ResponseExt, Error> {
             let string_to_sign = format!("{}", cap_tcha.chars_as_string());
 
             let captcha_signature = &sign(&captcha_secret_string, &string_to_sign);
-            Ok(Response::builder()
-                .status(StatusCode::OK)
-                .header("Cache-Control", "max-age=600")
-                .header("Access-Control-Allow-Origin", "*")
-                .header("Content-Type", "image/png")
-                .header("Custom-Header", "Fastly Captcha")
-                .header("set-cookie", format!("captcha-string={}", hex::encode(captcha_signature)))
-                .body(Body::try_from(img_cap)?)?)
+
+            Ok(Response::new()
+                .with_status(StatusCode::OK)
+                .with_header("Cache-Control", "max-age=600")
+                .with_header("Access-Control-Allow-Origin", "*")
+                .with_header("Content-Type", "image/png")
+                .with_header("Custom-Header", "Fastly Captcha")
+                .with_header("set-cookie", format!("captcha-string={}; ", hex::encode(captcha_signature)))
+                .with_body(Body::try_from(img_cap)?))
 
         }
         // If request is a `GET` to the `/backend` path, send to a named backend.
         (&Method::POST, "/verifyCaptcha") => {
 
-            let headers = req.headers_mut();
-            let mut cookie_string;
-
-            let default_header_value = &HeaderValue::from_str("0").unwrap();
-            cookie_string = headers
-                .get("cookie".to_string())
-                .unwrap_or(default_header_value)
-                .to_str()
-                .unwrap_or_default()
-                .to_string();
+	  let org_req1 = req.clone_with_body();
+	  let org_req2 = req.clone_with_body();
 
           let cookie_value = {
-                let c = Cookie::parse(cookie_string.as_str()).unwrap();
+
+                let c = Cookie::parse(org_req1.get_header_str("cookie").unwrap()).unwrap();
                 c.value_raw()
             };
 
             let cookie_clone = cookie_value.clone();
 
-            let (parts, body) = req.into_parts();
+            let body = org_req2.into_body();
             let body_hex = hex::encode(&sign(&captcha_secret_string, &body.into_string()));
             let body_hex_clone = body_hex.clone();
 
             if body_hex == cookie_value.unwrap()
             {
-                    Ok(Response::builder()
-                        .status(StatusCode::OK)
-                        .body(Body::try_from("")?)?)
+                    Ok(Response::new()
+                        .with_status(StatusCode::OK)
+                        .with_body(Body::try_from("")?))
                 }
                 else {
-                    Ok(Response::builder()
-                        .status(StatusCode::NOT_ACCEPTABLE)
-                        .header("captcha-string", body_hex_clone)
-                        .body(Body::try_from("")?)?)
+
+                    Ok(Response::new()
+                        .with_status(StatusCode::NOT_ACCEPTABLE)
+                        .with_header("captcha-string", body_hex_clone)
+                        .with_body(Body::try_from("")?))
                 }
         }
 
         // Catch all other requests and return a 404.
-        _ => Ok(Response::builder()
-            .status(StatusCode::NOT_FOUND)
-            .body(Body::from("The page you requested could not be found"))?),
+        _ =>
+        	Ok(Response::new()
+            	.with_status(StatusCode::NOT_FOUND)
+            	.with_body(Body::from("The page you requested could not be found"))),
     }
 }
 
