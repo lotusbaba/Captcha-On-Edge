@@ -196,7 +196,7 @@ fn main(mut req: Request) -> Result<Response, Error> {
                 .with_header("Access-Control-Allow-Origin", "*")
                 .with_header("Content-Type", "image/png")
                 .with_header("Custom-Header", "Fastly Captcha")
-                .with_header("set-cookie", format!("captcha-string={}; ", hex::encode(captcha_signature)))
+                .with_header("set-cookie", format!("captcha-string={}; SameSite=None; Secure", hex::encode(captcha_signature)))
                 .with_body(Body::try_from(img_cap)?))
 
         }
