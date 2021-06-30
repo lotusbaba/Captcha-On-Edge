@@ -21,4 +21,4 @@ This is a Rust app running on Compute@Edgge that generates a [CAPTCHA](https://e
 
 When you initially load the site, it serves an HTML and JavaScript web app that is statically delivered from the edge. The client web app makes calls to various endpoints at the edge and these endpoints each have a route within the Rust app that serves the request without the overhead of maintaining an origin server.
 
-You can find this code at https://github.com/lotusbaba/CaptchaOnEdge
+You can find this code at https://github.com/lotusbaba/Captcha-On-Edge.git
